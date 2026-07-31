@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verkada Co-Term Planner</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <header class="app-header">
+      <div>
+        <h1>Verkada Co-Term Planner</h1>
+        <div class="subtitle">Model an org-wide license co-termination date across every license column.</div>
+      </div>
+      <div class="header-inputs">
+        <div class="field">
+          <label for="org-name">Org name</label>
+          <input type="text" id="org-name" placeholder="Acme Stores">
+        </div>
+        <div class="field">
+          <label for="as-of-date">As-of date</label>
+          <input type="date" id="as-of-date">
+        </div>
+        <div class="field">
+          <label for="current-expiration-date">Current org expiration (before)</label>
+          <input type="date" id="current-expiration-date">
+        </div>
+      </div>
+    </header>
+
+    <div id="error-banner" class="error-banner" style="display:none;"></div>
+
+    <div class="toolbar">
+      <button id="add-column-btn" type="button">+ Add license column</button>
+      <span class="hint">One shared expiration date applies to every column's existing licensing. Claimed devices (not active) are what burn license time.</span>
+      <div id="picker-menu" class="picker-menu" style="display:none;"></div>
+    </div>
+
+    <div id="columns-grid" class="columns-grid"></div>
+    <div id="empty-state" class="empty-state">No license columns yet. Click "+ Add license column" to get started.</div>
+
+    <div class="card" id="new-licenses-card" style="margin-top:1.5rem;">
+      <div class="section-label" style="margin-bottom:.75rem;">New licenses</div>
+      <div class="hint" style="margin-bottom:.75rem;">Pick a product line, a term, and whether it's a capacity increase (new devices) or a renewal (extends devices you already have). Add as many entries as you need, for any product line — new licenses aren't limited to product lines already added above; picking a new one here adds it there too.</div>
+      <div class="toolbar" style="margin-bottom:.75rem;">
+        <button id="add-new-license-product-btn" type="button" class="secondary">+ Add product</button>
+        <div id="new-license-picker-menu" class="picker-menu" style="display:none;"></div>
+      </div>
+      <div id="new-licenses-list" class="batches-list"></div>
+      <div id="new-license-form" class="add-batch-row" style="margin-top:.6rem;"></div>
+    </div>
+
+    <footer class="compute-bar">
+      <button id="compute-btn" type="button">Compute Co-Term</button>
+    </footer>
+
+    <div id="results" class="results" style="display:none;">
+      <div class="card callout" id="callout"></div>
+      <div class="card">
+        <div class="section-label" style="margin-bottom:.75rem;">Per-column breakdown (total license-days)</div>
+        <div class="chart-wrap">
+          <canvas id="breakdown-chart"></canvas>
+        </div>
+      </div>
+      <div class="card table-scroll">
+        <table class="results-table" id="results-table">
+          <thead>
+            <tr>
+              <th>Column</th>
+              <th>Family</th>
+              <th>Claimed (before)</th>
+              <th>Active (before)</th>
+              <th>Expiration (before)</th>
+              <th>Existing days</th>
+              <th>Added days</th>
+              <th>Total days</th>
+              <th>Required units (after)</th>
+              <th>Standalone expiration</th>
+              <th>Share of org</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
