@@ -39,13 +39,11 @@ class LicenseUnit:
         label: str,
         family: str,
         devices_per_license: float = 1.0,
-        unit_basis: str = "",
     ):
         self.key = key
         self.label = label
         self.family = family
         self.devices_per_license = devices_per_license
-        self.unit_basis = unit_basis
 
         # "before" state (existing licensing prior to any new purchase)
         self.claimed_before: int = 0

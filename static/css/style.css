@@ -421,6 +421,37 @@ table.results-table tbody tr:hover {
   font-size: 0.72rem;
 }
 
+/* Multi-step timeline (additive) */
+.timeline-step {
+  background: #0c0f13;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.timeline-step-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.timeline-step-head .col-title {
+  align-self: center;
+  margin-right: auto;
+}
+
+.timeline-step-date {
+  min-width: 10rem;
+}
+
+.good { color: var(--good); }
+.bad { color: var(--bad); }
+
 footer.compute-bar {
   position: sticky;
   bottom: 0;

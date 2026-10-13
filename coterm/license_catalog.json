@@ -1,0 +1,259 @@
+{
+  "families": [
+    "Cameras",
+    "Access Control",
+    "Alarms",
+    "Environmental Sensors",
+    "Gateway",
+    "Intercom",
+    "Workplace"
+  ],
+  "units": [
+    {
+      "key": "cam_camera",
+      "label": "Camera License",
+      "family": "Cameras",
+      "unit_basis": "One license per Verkada camera, or per non-Verkada camera/channel connected via Command Connector",
+      "devices_per_license": 1,
+      "terms": [
+        {"term_days": 365, "us_price": 249, "term_label": ""},
+        {"term_days": 1095, "us_price": 659, "term_label": ""},
+        {"term_days": 1825, "us_price": 1099, "term_label": ""},
+        {"term_days": 3650, "us_price": 2199, "term_label": ""}
+      ]
+    },
+    {
+      "key": "cam_multisensor_2",
+      "label": "Two-Camera Multisensor License (MLT2)",
+      "family": "Cameras",
+      "unit_basis": "One license per two-camera multisensor unit",
+      "devices_per_license": 1,
+      "terms": [
+        {"term_days": 365, "us_price": 419, "term_label": ""},
+        {"term_days": 1095, "us_price": 1199, "term_label": ""},
+        {"term_days": 1825, "us_price": 1999, "term_label": ""},
+        {"term_days": 3650, "us_price": 3999, "term_label": ""}
+      ]
+    },
+    {
+      "key": "cam_multisensor_4",
+      "label": "Four-Camera Multisensor License (MLT4)",
+      "family": "Cameras",
+      "unit_basis": "One license per four-camera multisensor unit",
+      "devices_per_license": 1,
+      "terms": [
+        {"term_days": 365, "us_price": 699, "term_label": ""},
+        {"term_days": 1095, "us_price": 1949, "term_label": ""},
+        {"term_days": 1825, "us_price": 3249, "term_label": ""},
+        {"term_days": 3650, "us_price": 6499, "term_label": ""}
+      ]
+    },
+    {
+      "key": "cam_cloud_backup",
+      "label": "Extended Cloud Backup License (30-day increment)",
+      "family": "Cameras",
+      "unit_basis": "One license per 30-day increment of a single device's cloud retention",
+      "devices_per_license": 1,
+      "terms": [
+        {"term_days": 365, "us_price": 149, "term_label": "1-Year (30-day retention increment)"},
+        {"term_days": 1095, "us_price": 449, "term_label": "3-Year (30-day retention increment)"},
+        {"term_days": 1825, "us_price": 749, "term_label": "5-Year (30-day retention increment)"},
+        {"term_days": 3650, "us_price": 1499, "term_label": "10-Year (30-day retention increment)"}
+      ]
+    },
+    {
+      "key": "cam_viewing_station",
+      "label": "Viewing Station License",
+      "family": "Cameras",
+      "unit_basis": "One license per viewing station",
+      "devices_per_license": 1,
+      "terms": [
+        {"term_days": 365, "us_price": 549, "term_label": ""},
+        {"term_days": 1095, "us_price": 1499, "term_label": ""},
+        {"term_days": 1825, "us_price": 2499, "term_label": ""},
+        {"term_days": 3650, "us_price": 4999, "term_label": ""}
+      ]
+    },
+    {
+      "key": "ac_door",
+      "label": "Door License",
+      "family": "Access Control",
+      "unit_basis": "One license per door (AC62, AC42, AC41, AC12)",
+      "devices_per_license": 1,
+      "terms": [
+        {"term_days": 365, "us_price": 249, "term_label": ""},
+        {"term_days": 1095, "us_price": 599, "term_label": ""},
+        {"term_days": 1825, "us_price": 999, "term_label": ""},
+        {"term_days": 3650, "us_price": 1999, "term_label": ""}
+      ]
+    },
+    {
+      "key": "ac_io_controller",
+      "label": "AX11 IO Controller License",
+      "family": "Access Control",
+      "unit_basis": "One license per AX11 access IO controller",
+      "devices_per_license": 1,
+      "terms": [
+        {"term_days": 365, "us_price": 999, "term_label": ""},
+        {"term_days": 1095, "us_price": 2599, "term_label": ""},
+        {"term_days": 1825, "us_price": 3999, "term_label": ""},
+        {"term_days": 3650, "us_price": 7999, "term_label": ""}
+      ]
+    },
+    {
+      "key": "ac_mobile_nfc",
+      "label": "Mobile NFC License (20-user pack)",
+      "family": "Access Control",
+      "unit_basis": "One license per 20 mobile NFC credential users",
+      "devices_per_license": 20,
+      "terms": [
+        {"term_days": 365, "us_price": 199, "term_label": ""},
+        {"term_days": 1095, "us_price": 599, "term_label": ""},
+        {"term_days": 1825, "us_price": 999, "term_label": ""},
+        {"term_days": 3650, "us_price": 1999, "term_label": ""}
+      ]
+    },
+    {
+      "key": "alarm_basic_site",
+      "label": "Basic Alarms Site License",
+      "family": "Alarms",
+      "unit_basis": "One license per physical site/location; unlimited sensors, no video verification",
+      "devices_per_license": 1,
+      "terms": [
+        {"term_days": 365, "us_price": 600, "term_label": ""},
+        {"term_days": 1095, "us_price": 1800, "term_label": ""},
+        {"term_days": 1825, "us_price": 3000, "term_label": ""},
+        {"term_days": 3650, "us_price": 6000, "term_label": ""}
+      ]
+    },
+    {
+      "key": "alarm_advanced_site",
+      "label": "Advanced Video Alarms Site License",
+      "family": "Alarms",
+      "unit_basis": "One license per physical site/location; video verification, covers 15 alarm-triggering cameras per site (stackable in packs of 15)",
+      "devices_per_license": 1,
+      "terms": [
+        {"term_days": 365, "us_price": 1500, "term_label": ""},
+        {"term_days": 1095, "us_price": 4500, "term_label": ""},
+        {"term_days": 1825, "us_price": 7500, "term_label": ""},
+        {"term_days": 3650, "us_price": 15000, "term_label": ""}
+      ]
+    },
+    {
+      "key": "alarm_horn_speaker",
+      "label": "BZ11 Horn Speaker License",
+      "family": "Alarms",
+      "unit_basis": "One license per BZ11 horn speaker device",
+      "devices_per_license": 1,
+      "terms": [
+        {"term_days": 365, "us_price": 199, "term_label": ""},
+        {"term_days": 1095, "us_price": 549, "term_label": ""},
+        {"term_days": 1825, "us_price": 899, "term_label": ""},
+        {"term_days": 3650, "us_price": 1799, "term_label": ""}
+      ]
+    },
+    {
+      "key": "alarm_cellular_backup",
+      "label": "Cellular Backup License",
+      "family": "Alarms",
+      "unit_basis": "One license per cellular backup communicator module",
+      "devices_per_license": 1,
+      "terms": [
+        {"term_days": 365, "us_price": 299, "term_label": ""},
+        {"term_days": 1095, "us_price": 849, "term_label": ""},
+        {"term_days": 1825, "us_price": 1349, "term_label": ""},
+        {"term_days": 3650, "us_price": 2699, "term_label": ""}
+      ]
+    },
+    {
+      "key": "env_sensor",
+      "label": "Environmental Sensor License (SV)",
+      "family": "Environmental Sensors",
+      "unit_basis": "One license per environmental sensor",
+      "devices_per_license": 1,
+      "terms": [
+        {"term_days": 365, "us_price": 249, "term_label": ""},
+        {"term_days": 1095, "us_price": 599, "term_label": ""},
+        {"term_days": 1825, "us_price": 999, "term_label": ""},
+        {"term_days": 3650, "us_price": 1999, "term_label": ""}
+      ]
+    },
+    {
+      "key": "gw_cellular",
+      "label": "Cellular Gateway License",
+      "family": "Gateway",
+      "unit_basis": "One license per cellular gateway",
+      "devices_per_license": 1,
+      "terms": [
+        {"term_days": 365, "us_price": 349, "term_label": ""},
+        {"term_days": 1095, "us_price": 999, "term_label": ""},
+        {"term_days": 1825, "us_price": 1599, "term_label": ""},
+        {"term_days": 3650, "us_price": 3199, "term_label": ""}
+      ]
+    },
+    {
+      "key": "gw_wifi",
+      "label": "Wi-Fi Gateway License",
+      "family": "Gateway",
+      "unit_basis": "One license per Wi-Fi gateway",
+      "devices_per_license": 1,
+      "terms": [
+        {"term_days": 365, "us_price": 99, "term_label": ""},
+        {"term_days": 1095, "us_price": 279, "term_label": ""},
+        {"term_days": 1825, "us_price": 449, "term_label": ""},
+        {"term_days": 3650, "us_price": 899, "term_label": ""}
+      ]
+    },
+    {
+      "key": "gw_data_plan",
+      "label": "Cellular Gateway Data Plan",
+      "family": "Gateway",
+      "unit_basis": "One license per connected camera/intercom video device (a two-cam multisensor needs 2, a four-cam multisensor needs 4)",
+      "devices_per_license": 1,
+      "terms": [
+        {"term_days": 365, "us_price": 599, "term_label": ""},
+        {"term_days": 1095, "us_price": 1799, "term_label": ""},
+        {"term_days": 1825, "us_price": 2999, "term_label": ""}
+      ]
+    },
+    {
+      "key": "intercom_device",
+      "label": "Intercom License",
+      "family": "Intercom",
+      "unit_basis": "One license per intercom device",
+      "devices_per_license": 1,
+      "terms": [
+        {"term_days": 365, "us_price": 399, "term_label": ""},
+        {"term_days": 1095, "us_price": 1199, "term_label": ""},
+        {"term_days": 1825, "us_price": 1999, "term_label": ""},
+        {"term_days": 3650, "us_price": 3999, "term_label": ""}
+      ]
+    },
+    {
+      "key": "intercom_desk_station",
+      "label": "Desk Station License",
+      "family": "Intercom",
+      "unit_basis": "One license per iPad running the Verkada Desk Station app",
+      "devices_per_license": 1,
+      "terms": [
+        {"term_days": 365, "us_price": 249, "term_label": ""},
+        {"term_days": 1095, "us_price": 749, "term_label": ""},
+        {"term_days": 1825, "us_price": 1249, "term_label": ""},
+        {"term_days": 3650, "us_price": 2499, "term_label": ""}
+      ]
+    },
+    {
+      "key": "workplace",
+      "label": "Workplace License",
+      "family": "Workplace",
+      "unit_basis": "One license grants access to one Guest iPad and one Mailroom site",
+      "devices_per_license": 1,
+      "terms": [
+        {"term_days": 365, "us_price": 3600, "term_label": ""},
+        {"term_days": 1095, "us_price": 10800, "term_label": ""},
+        {"term_days": 1825, "us_price": 18000, "term_label": ""},
+        {"term_days": 3650, "us_price": 36000, "term_label": ""}
+      ]
+    }
+  ]
+}

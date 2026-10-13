@@ -38,23 +38,26 @@
       <div id="picker-menu" class="picker-menu" style="display:none;"></div>
     </div>
 
-    <div id="columns-grid" class="columns-grid"></div>
-    <div id="empty-state" class="empty-state">No license columns yet. Click "+ Add license column" to get started.</div>
+    <div id="input-section">
+      <div id="columns-grid" class="columns-grid"></div>
+      <div id="empty-state" class="empty-state">No license columns yet. Click "+ Add license column" to get started.</div>
 
-    <div class="card" id="new-licenses-card" style="margin-top:1.5rem;">
-      <div class="section-label" style="margin-bottom:.75rem;">New licenses</div>
-      <div class="hint" style="margin-bottom:.75rem;">Pick a product line, a term, and whether it's a capacity increase (new devices) or a renewal (extends devices you already have). Add as many entries as you need, for any product line — new licenses aren't limited to product lines already added above; picking a new one here adds it there too.</div>
-      <div class="toolbar" style="margin-bottom:.75rem;">
-        <button id="add-new-license-product-btn" type="button" class="secondary">+ Add product</button>
-        <div id="new-license-picker-menu" class="picker-menu" style="display:none;"></div>
+      <div class="card" id="new-licenses-card" style="margin-top:1.5rem;">
+        <div class="section-label" style="margin-bottom:.75rem;">New licenses</div>
+        <div class="hint" style="margin-bottom:.75rem;">Pick a product line, a term, and whether it's a capacity increase (new devices) or a renewal (extends devices you already have). Add as many entries as you need, for any product line — new licenses aren't limited to product lines already added above; picking a new one here adds it there too.</div>
+        <div class="toolbar" style="margin-bottom:.75rem;">
+          <button id="add-new-license-product-btn" type="button" class="secondary">+ Add product</button>
+          <div id="new-license-picker-menu" class="picker-menu" style="display:none;"></div>
+        </div>
+        <div id="new-licenses-list" class="batches-list"></div>
+        <div id="new-license-form" class="add-batch-row" style="margin-top:.6rem;"></div>
       </div>
-      <div id="new-licenses-list" class="batches-list"></div>
-      <div id="new-license-form" class="add-batch-row" style="margin-top:.6rem;"></div>
-    </div>
 
-    <footer class="compute-bar">
-      <button id="compute-btn" type="button">Compute Co-Term</button>
-    </footer>
+      <footer class="compute-bar">
+        <button id="clear-results-btn" type="button" class="ghost">Clear</button>
+        <button id="compute-btn" type="button">Compute Co-Term</button>
+      </footer>
+    </div>
 
     <div id="results" class="results" style="display:none;">
       <div class="card callout" id="callout"></div>
@@ -83,6 +86,37 @@
           </thead>
           <tbody></tbody>
         </table>
+      </div>
+    </div>
+
+    <div class="card" id="timeline-card" style="margin-top:1.5rem;">
+      <div class="section-label" style="margin-bottom:.75rem;">Multi-step timeline</div>
+      <div class="hint" style="margin-bottom:.75rem;">Model buying licenses across several orders over time. Each order recomputes the org's single pooled co-term date, using the date of the order as the reference point and last order's result as the new starting point.</div>
+      <div id="timeline-steps"></div>
+      <div class="toolbar" style="margin-top:.75rem; margin-bottom:0;">
+        <button id="add-timeline-step-btn" type="button" class="secondary">+ Add order</button>
+        <button id="clear-timeline-results-btn" type="button" class="ghost">Clear</button>
+        <button id="compute-timeline-btn" type="button">Compute Timeline</button>
+      </div>
+      <div id="timeline-results" style="display:none; margin-top:1.5rem;">
+        <div class="chart-wrap" style="height:260px; margin-bottom:1.5rem;">
+          <canvas id="timeline-chart"></canvas>
+        </div>
+        <div class="table-scroll">
+          <table class="results-table" id="timeline-table">
+            <thead>
+              <tr><th>Step</th><th>Date</th><th>Org co-term date</th><th>Runway (days)</th><th>Δ vs previous</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="section-label" style="margin-top:1.5rem; margin-bottom:.75rem;">Capacity by product line, per order</div>
+        <div class="table-scroll">
+          <table class="results-table" id="timeline-pivot-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>

@@ -263,6 +263,33 @@
     return ` — $${sku.us_price.toLocaleString()}`;
   }
 
+  // Unit price alone (used in term dropdowns, where the device count isn't
+  // known yet) vs. unit price + total cost (used once an entry has an
+  // actual devices-claimed count, so the license quantity -- and therefore
+  // a real total -- is known). Quantity mirrors the same
+  // ceil(devices / devices_per_license) math used when building the actual
+  // purchase batch, so the total shown here always matches what gets sent.
+  function priceBreakdownFor(col, termDays, devicesClaimed) {
+    const sku = (col && col.skus || []).find((s) => s.term_days === termDays);
+    if (!sku) return "";
+    const dpl = (col && col.devices_per_license) || 1;
+    const qty = Math.max(1, Math.ceil((devicesClaimed || 0) / dpl));
+    const unit = sku.us_price;
+    if (qty <= 1) return `$${unit.toLocaleString()}`;
+    return `$${unit.toLocaleString()} ea × ${qty} = $${(unit * qty).toLocaleString()} total`;
+  }
+
+  // Some SKUs (e.g. the cloud backup 30-day retention increment) need a
+  // product-specific term label instead of the generic "N-Year (Xd)" text,
+  // since the generic phrasing hides what that price tier actually buys.
+  // The catalog carries this per-sku override in `term_label`; fall back to
+  // the generic label when a unit has none (every unit except cloud backup).
+  function termDisplayLabel(col, termDays) {
+    const sku = (col && col.skus || []).find((s) => s.term_days === termDays);
+    if (sku && sku.term_label) return sku.term_label;
+    return termLabel(termDays);
+  }
+
   function buildColumnCard(col) {
     const card = el("div", { className: "col-card" });
 
@@ -343,13 +370,13 @@
       const col = findColumn(nl.columnId);
       if (!col) return; // stale entry, column was removed
       const row = el("div", { className: "batch-row" });
-      const priceHint = priceHintFor(col, nl.term_days);
+      const priceBreakdown = priceBreakdownFor(col, nl.term_days, nl.devices_claimed);
       row.appendChild(el("div", {
         className: "batch-info",
-        text: `${col.label} — ${KIND_LABEL[nl.kind] || "Capacity increase"} — ${termLabel(nl.term_days)} × ${nl.devices_claimed} device(s)`,
+        text: `${col.label} — ${KIND_LABEL[nl.kind] || "Capacity increase"} — ${termDisplayLabel(col, nl.term_days)} × ${nl.devices_claimed} device(s)`,
       }));
-      if (priceHint) {
-        row.appendChild(el("div", { className: "batch-price", text: priceHint.replace(" — ", "") }));
+      if (priceBreakdown) {
+        row.appendChild(el("div", { className: "batch-price", text: priceBreakdown }));
       }
       const rm = el("button", { className: "danger", text: "×", attrs: { type: "button", title: "Remove" } });
       rm.addEventListener("click", () => {
@@ -397,7 +424,7 @@
         ? col.term_options_days
         : [365, 1095, 1825, 3650];
       for (const days of termOptions) {
-        const opt = el("option", { text: termLabel(days) + (col ? priceHintFor(col, days) : "") });
+        const opt = el("option", { text: termDisplayLabel(col, days) + (col ? priceHintFor(col, days) : "") });
         opt.value = String(days);
         termSelect.appendChild(opt);
       }
@@ -648,8 +675,10 @@
     });
 
     // Resize canvas container height based on number of rows so long
-    // lists don't get squished.
-    const wrap = document.querySelector(".chart-wrap");
+    // lists don't get squished. Scoped to #results specifically -- the
+    // timeline section has its own .chart-wrap and a global selector would
+    // silently grab whichever one happens to be first in the DOM.
+    const wrap = document.querySelector("#results .chart-wrap");
     wrap.style.height = Math.max(260, rows.length * 42) + "px";
   }
 
@@ -675,6 +704,493 @@
   }
 
   // ---------------------------------------------------------------------
+  // Multi-step timeline (sequence of dated orders, computed chronologically)
+  //
+  // Separate, additive section: reuses state.columns / addColumnFromCatalog /
+  // addCustomColumn / findColumn / el / termLabel / priceHintFor / fmtDate /
+  // fmtNum / todayIso / showError from above, but owns its own state array
+  // and DOM so it never touches the existing single-step flow.
+  // ---------------------------------------------------------------------
+
+  state.timelineSteps = []; // { id, date, entries: [{id, columnId, term_days, kind, devices_claimed}], _pickerOpen, _pendingColumnId }
+  state.nextTimelineStepId = 1;
+  state.nextTimelineEntryId = 1;
+  state.timelineChart = null;
+
+  function addTimelineStep() {
+    state.timelineSteps.push({
+      id: state.nextTimelineStepId++,
+      date: todayIso(),
+      entries: [],
+      _pickerOpen: false,
+      _pendingColumnId: null,
+    });
+    renderTimelineSteps();
+  }
+
+  function removeTimelineStep(stepId) {
+    state.timelineSteps = state.timelineSteps.filter((s) => s.id !== stepId);
+    renderTimelineSteps();
+  }
+
+  function findTimelineStep(stepId) {
+    return state.timelineSteps.find((s) => s.id === stepId);
+  }
+
+  function removeTimelineEntry(stepId, entryId) {
+    const step = findTimelineStep(stepId);
+    if (!step) return;
+    step.entries = step.entries.filter((e) => e.id !== entryId);
+    renderTimelineSteps();
+  }
+
+  function renderTimelineSteps() {
+    const container = document.getElementById("timeline-steps");
+    if (!container) return;
+    container.innerHTML = "";
+
+    if (state.timelineSteps.length === 0) {
+      container.appendChild(el("div", {
+        className: "empty-state",
+        text: "No orders yet. Click \"+ Add order\" to model your first future purchase.",
+      }));
+      return;
+    }
+
+    state.timelineSteps.forEach((step, idx) => {
+      container.appendChild(buildTimelineStepCard(step, idx));
+    });
+  }
+
+  function buildTimelineStepCard(step, idx) {
+    const card = el("div", { className: "timeline-step", attrs: { "data-step-id": String(step.id) } });
+
+    const head = el("div", { className: "timeline-step-head" });
+    head.appendChild(el("div", { className: "col-title", text: `Order ${idx + 1}` }));
+
+    const dateField = el("div", { className: "field timeline-step-date" });
+    dateField.appendChild(el("label", { text: "Order date" }));
+    const dateInput = el("input", { attrs: { type: "date" } });
+    dateInput.value = step.date || todayIso();
+    dateInput.addEventListener("input", () => {
+      step.date = dateInput.value;
+    });
+    dateField.appendChild(dateInput);
+    head.appendChild(dateField);
+
+    const removeBtn = el("button", { className: "danger", text: "×", attrs: { type: "button", title: "Remove order" } });
+    removeBtn.addEventListener("click", () => removeTimelineStep(step.id));
+    head.appendChild(removeBtn);
+    card.appendChild(head);
+
+    // "+ Add product" toolbar: an always-visible button that toggles a
+    // floating catalog/custom picker menu, matching the New Licenses
+    // section's own top-level picker exactly (button + overlay menu, not a
+    // dropdown option) -- rather than replacing the entry form below.
+    const pickerToolbar = el("div", {
+      className: "toolbar",
+      attrs: { style: "position:relative; margin:.5rem 0; min-height:0;" },
+    });
+    const addProductBtn = el("button", { className: "secondary", text: "+ Add product", attrs: { type: "button" } });
+    addProductBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const wasOpen = step._pickerOpen;
+      state.timelineSteps.forEach((s) => { s._pickerOpen = false; });
+      step._pickerOpen = !wasOpen;
+      renderTimelineSteps();
+    });
+    pickerToolbar.appendChild(addProductBtn);
+    if (step._pickerOpen) {
+      pickerToolbar.appendChild(buildTimelineProductPicker(step));
+    }
+    card.appendChild(pickerToolbar);
+
+    // Entries already added to this step
+    const KIND_LABEL = { capacity: "Capacity increase", renewal: "Renewal" };
+    const list = el("div", { className: "batches-list" });
+    step.entries.forEach((entry) => {
+      const col = findColumn(entry.columnId);
+      if (!col) return; // stale entry, column was removed
+      const row = el("div", { className: "batch-row" });
+      row.appendChild(el("div", {
+        className: "batch-info",
+        text: `${col.label} — ${KIND_LABEL[entry.kind] || "Capacity increase"} — ${termDisplayLabel(col, entry.term_days)} × ${entry.devices_claimed} device(s)`,
+      }));
+      const priceBreakdown = priceBreakdownFor(col, entry.term_days, entry.devices_claimed);
+      if (priceBreakdown) {
+        row.appendChild(el("div", { className: "batch-price", text: priceBreakdown }));
+      }
+      const rm = el("button", { className: "danger", text: "×", attrs: { type: "button", title: "Remove" } });
+      rm.addEventListener("click", () => removeTimelineEntry(step.id, entry.id));
+      row.appendChild(rm);
+      list.appendChild(row);
+    });
+    card.appendChild(list);
+
+    // Add-entry form, or a prompt to add a product first if none exist yet.
+    if (state.columns.length === 0) {
+      card.appendChild(el("div", { className: "hint", text: "No products yet — click \"+ Add product\" above to add one." }));
+    } else {
+      card.appendChild(buildTimelineEntryForm(step));
+    }
+
+    return card;
+  }
+
+  function buildTimelineEntryForm(step) {
+    const form = el("div", { className: "add-batch-row" });
+
+    const colSelect = el("select");
+    for (const col of state.columns) {
+      const opt = el("option", { text: `${col.label} (${col.family})` });
+      opt.value = String(col.id);
+      colSelect.appendChild(opt);
+    }
+
+    if (step._pendingColumnId && state.columns.some((c) => c.id === step._pendingColumnId)) {
+      colSelect.value = String(step._pendingColumnId);
+    }
+    step._pendingColumnId = null;
+
+    const termSelect = el("select");
+    function populateTermSelect() {
+      const col = findColumn(parseInt(colSelect.value, 10));
+      termSelect.innerHTML = "";
+      const termOptions = (col && col.term_options_days && col.term_options_days.length)
+        ? col.term_options_days
+        : [365, 1095, 1825, 3650];
+      for (const days of termOptions) {
+        const opt = el("option", { text: termDisplayLabel(col, days) + (col ? priceHintFor(col, days) : "") });
+        opt.value = String(days);
+        termSelect.appendChild(opt);
+      }
+    }
+    populateTermSelect();
+    colSelect.addEventListener("change", populateTermSelect);
+
+    const kindSelect = el("select");
+    kindSelect.appendChild(el("option", { text: "Capacity increase", attrs: { value: "capacity" } }));
+    kindSelect.appendChild(el("option", { text: "Renewal", attrs: { value: "renewal" } }));
+
+    const devicesInput = el("input", { attrs: { type: "number", min: "1", placeholder: "Devices claimed" } });
+
+    const addBtn = el("button", { className: "secondary", text: "Add", attrs: { type: "button" } });
+    addBtn.addEventListener("click", () => {
+      const columnId = parseInt(colSelect.value, 10);
+      const termDays = parseInt(termSelect.value, 10);
+      const kind = kindSelect.value === "renewal" ? "renewal" : "capacity";
+      const devicesClaimed = parseInt(devicesInput.value, 10);
+      if (!columnId || !termDays || !devicesClaimed || devicesClaimed <= 0) return;
+      step.entries.push({
+        id: state.nextTimelineEntryId++,
+        columnId,
+        term_days: termDays,
+        kind,
+        devices_claimed: devicesClaimed,
+      });
+      renderTimelineSteps();
+    });
+
+    form.appendChild(colSelect);
+    form.appendChild(termSelect);
+    form.appendChild(kindSelect);
+    form.appendChild(devicesInput);
+    form.appendChild(addBtn);
+
+    return form;
+  }
+
+  // Floating catalog/custom picker menu for one timeline step's "+ Add
+  // product" button -- same visual/behavioral pattern as the New Licenses
+  // section's top-level picker (a `.picker-menu` absolutely positioned
+  // against its `position:relative` toolbar), just scoped to this step
+  // instead of the shared PICKERS registry (which assumes a small fixed set
+  // of button/menu ids registered once at init, not one per dynamic step).
+  function buildTimelineProductPicker(step) {
+    const menu = el("div", { className: "picker-menu", attrs: { style: "display:block;" } });
+
+    const byFamily = {};
+    for (const u of state.catalog.units || []) {
+      (byFamily[u.family] = byFamily[u.family] || []).push(u);
+    }
+    const familyOrder = (state.catalog.families || []).filter((f) => byFamily[f]);
+
+    for (const fam of familyOrder) {
+      menu.appendChild(el("div", { className: "picker-family", text: fam }));
+      for (const u of byFamily[fam]) {
+        const item = el("div", { className: "picker-item" });
+        item.appendChild(el("div", { className: "pi-label", text: u.label }));
+        if (u.unit_basis) {
+          item.appendChild(el("div", { className: "pi-basis", text: u.unit_basis }));
+        }
+        item.addEventListener("click", () => {
+          const col = addColumnFromCatalog(u);
+          step._pickerOpen = false;
+          step._pendingColumnId = col.id;
+          renderTimelineSteps();
+        });
+        menu.appendChild(item);
+      }
+    }
+
+    menu.appendChild(el("hr"));
+    const customItem = el("div", { className: "picker-item picker-custom", text: "+ Add custom column…" });
+    customItem.addEventListener("click", () => {
+      const col = addCustomColumn();
+      step._pickerOpen = false;
+      if (col) step._pendingColumnId = col.id;
+      renderTimelineSteps();
+    });
+    menu.appendChild(customItem);
+
+    return menu;
+  }
+
+  // Closing on outside click, matching the top-level pickers' behavior.
+  // Registered once (see initTimeline) rather than per-render, since the
+  // step cards (and their picker buttons/menus) are torn down and rebuilt
+  // on every renderTimelineSteps() call.
+  function closeTimelinePickerOnOutsideClick(e) {
+    const openStep = state.timelineSteps.find((s) => s._pickerOpen);
+    if (!openStep) return;
+    const card = document.querySelector(`.timeline-step[data-step-id="${openStep.id}"]`);
+    if (card && card.contains(e.target)) return; // click inside this step's own card is handled locally
+    openStep._pickerOpen = false;
+    renderTimelineSteps();
+  }
+
+  function buildTimelineRequestPayload() {
+    const orgName = document.getElementById("org-name").value.trim() || "Untitled Org";
+    const startingExpiration = document.getElementById("current-expiration-date").value || null;
+    const asOfDate = document.getElementById("as-of-date").value || todayIso();
+
+    return {
+      org_name: orgName,
+      starting_expiration_date: startingExpiration,
+      as_of_date: asOfDate,
+      columns: state.columns.map((col) => ({
+        key: col.key,
+        label: col.label,
+        family: col.family,
+        devices_per_license: col.devices_per_license,
+        claimed_before: col.claimed_before,
+        active_before: col.active_before,
+      })),
+      steps: state.timelineSteps.map((step) => ({
+        label: null,
+        date: step.date,
+        entries: step.entries
+          .filter((e) => findColumn(e.columnId))
+          .map((e) => {
+            const col = findColumn(e.columnId);
+            return {
+              key: col.key,
+              label: col.label,
+              family: col.family,
+              devices_per_license: col.devices_per_license,
+              term_days: e.term_days,
+              kind: e.kind,
+              devices_claimed: e.devices_claimed,
+            };
+          }),
+      })),
+    };
+  }
+
+  async function postTimelineCompute(payload) {
+    const resp = await fetch("/api/coterm/timeline", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      throw new Error(data && data.error ? data.error : `Timeline compute failed (${resp.status})`);
+    }
+    return data;
+  }
+
+  async function computeTimeline() {
+    showError("");
+
+    if (state.columns.length === 0) {
+      showError("Add at least one license column before computing the timeline.");
+      return;
+    }
+    if (state.timelineSteps.length === 0) {
+      showError("Add at least one order before computing the timeline.");
+      return;
+    }
+
+    let data;
+    try {
+      data = await postTimelineCompute(buildTimelineRequestPayload());
+    } catch (err) {
+      showError(err.message);
+      return;
+    }
+
+    renderTimelineResults(data);
+  }
+
+  function renderTimelineResults(data) {
+    document.getElementById("timeline-results").style.display = "block";
+    renderTimelineTable(data);
+    renderTimelineChart(data);
+    renderTimelinePivotTable(data);
+  }
+
+  // Pivot view: one column per order (including the Starting point), one
+  // row per product line, each cell showing that line's capacity (required
+  // units) as of that order. The co-term date achieved by an order is a
+  // single org-wide value, so it's shown once in that order's column
+  // header rather than repeated in every row.
+  function renderTimelinePivotTable(data) {
+    const thead = document.querySelector("#timeline-pivot-table thead");
+    const tbody = document.querySelector("#timeline-pivot-table tbody");
+    thead.innerHTML = "";
+    tbody.innerHTML = "";
+
+    // Union of product lines across every step, in first-seen order (a
+    // product introduced by a later order won't have appeared in earlier
+    // steps' rows at all).
+    const rowMeta = [];
+    const seenKeys = new Set();
+    data.steps.forEach((step) => {
+      (step.rows || []).forEach((r) => {
+        if (!seenKeys.has(r.key)) {
+          seenKeys.add(r.key);
+          rowMeta.push({ key: r.key, label: r.label });
+        }
+      });
+    });
+
+    const headRow = el("tr");
+    headRow.appendChild(el("th", { text: "Product line" }));
+    data.steps.forEach((step) => {
+      const th = el("th");
+      th.appendChild(el("div", {
+        text: step.label,
+        attrs: { style: "color:var(--text); text-transform:none; font-size:.85rem; font-weight:600;" },
+      }));
+      th.appendChild(el("div", { className: "hint", text: fmtDate(step.date) }));
+      th.appendChild(el("div", { className: "hint", text: `Co-term: ${fmtDate(step.org_expiration_date)}` }));
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+
+    rowMeta.forEach((rm) => {
+      const tr = el("tr");
+      tr.appendChild(el("td", { text: rm.label }));
+      data.steps.forEach((step) => {
+        const row = (step.rows || []).find((r) => r.key === rm.key);
+        tr.appendChild(el("td", { text: row ? fmtNum(row.required_units_after, 0) : "—" }));
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderTimelineTable(data) {
+    const tbody = document.querySelector("#timeline-table tbody");
+    tbody.innerHTML = "";
+
+    let prevRemaining = null;
+    data.steps.forEach((step) => {
+      const tr = el("tr");
+      tr.appendChild(el("td", { text: step.label || "" }));
+      tr.appendChild(el("td", { text: fmtDate(step.date) }));
+      tr.appendChild(el("td", { text: fmtDate(step.org_expiration_date) }));
+      tr.appendChild(el("td", { text: fmtNum(step.org_remaining_days, 1) }));
+
+      const deltaTd = el("td", { text: "" });
+      if (prevRemaining !== null && step.org_remaining_days !== null && step.org_remaining_days !== undefined) {
+        const delta = step.org_remaining_days - prevRemaining;
+        deltaTd.textContent = (delta >= 0 ? "+" : "") + fmtNum(delta, 1);
+        deltaTd.className = delta >= 0 ? "good" : "bad";
+      }
+      tr.appendChild(deltaTd);
+
+      tbody.appendChild(tr);
+      if (step.org_remaining_days !== null && step.org_remaining_days !== undefined) {
+        prevRemaining = step.org_remaining_days;
+      }
+    });
+  }
+
+  function renderTimelineChart(data) {
+    const ctx = document.getElementById("timeline-chart").getContext("2d");
+    const labels = data.steps.map((s) => s.label || "");
+    const values = data.steps.map((s) => s.org_remaining_days);
+
+    if (state.timelineChart) {
+      state.timelineChart.destroy();
+    }
+
+    state.timelineChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Runway (days)",
+            data: values,
+            borderColor: "#4f8cff",
+            backgroundColor: "#4f8cff",
+            tension: 0.2,
+            pointRadius: 4,
+            fill: false,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${fmtNum(ctx.parsed.y, 1)} days`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: { color: "#262c35" },
+            ticks: { color: "#8b93a1" },
+          },
+          y: {
+            title: { display: true, text: "Runway (days)", color: "#8b93a1" },
+            grid: { color: "#262c35" },
+            ticks: { color: "#8b93a1" },
+          },
+        },
+      },
+    });
+  }
+
+  function initTimeline() {
+    document.getElementById("add-timeline-step-btn").addEventListener("click", addTimelineStep);
+    document.getElementById("compute-timeline-btn").addEventListener("click", computeTimeline);
+    document.getElementById("clear-timeline-results-btn").addEventListener("click", clearTimelineResults);
+    document.addEventListener("click", closeTimelinePickerOnOutsideClick);
+    renderTimelineSteps();
+  }
+
+  // Hides the last computed timeline output without touching the order
+  // steps themselves -- so an accidental Compute Timeline click doesn't
+  // cost you the orders you'd already built.
+  function clearTimelineResults() {
+    document.getElementById("timeline-results").style.display = "none";
+    if (state.timelineChart) {
+      state.timelineChart.destroy();
+      state.timelineChart = null;
+    }
+    showError("");
+  }
+
+  document.addEventListener("DOMContentLoaded", initTimeline);
+
+  // ---------------------------------------------------------------------
   // Init
   // ---------------------------------------------------------------------
 
@@ -693,9 +1209,22 @@
     });
 
     document.getElementById("compute-btn").addEventListener("click", compute);
+    document.getElementById("clear-results-btn").addEventListener("click", clearResults);
     renderColumns();
     renderNewLicenses();
     loadCatalog();
+  }
+
+  // Hides the last computed output (e.g. an accidental click on Compute
+  // Co-Term) without touching any input -- columns, new-license entries,
+  // and timeline steps are left exactly as they were.
+  function clearResults() {
+    document.getElementById("results").style.display = "none";
+    if (state.chart) {
+      state.chart.destroy();
+      state.chart = null;
+    }
+    showError("");
   }
 
   document.addEventListener("DOMContentLoaded", init);
